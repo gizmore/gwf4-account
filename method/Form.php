@@ -5,7 +5,7 @@
  */
 final class Account_Form extends GWF_Method
 {
-	public function isLoginRequired() { return true; }
+	public function isLoginRequired() { return !$this->module->cfgGuestSettings(); }
 	
 	public function getHTAccess()
 	{
@@ -68,19 +68,24 @@ final class Account_Form extends GWF_Method
 	################
 	public function getForm()
 	{
-		$user = GWF_Session::getUser();
+		$user = GWF_User::getStaticOrGuest();
+		$is_guest = $user->isGuest();
 		$user_email = $user->getVar('user_email');
 		
 		# SECURITY
-		$data = array(
-			'username' => array(GWF_Form::SSTRING, $user->getVar('user_name'), $this->module->lang('th_username')),
-			'email' => array(GWF_Form::STRING, $user_email, $this->module->lang('th_email')),
-		);
+		$data = array();
+		$data['username'] = array(GWF_Form::SSTRING, $user->getVar('user_name'), $this->module->lang('th_username'));
 		
-		### Email set but not approved.
-		if ($user_email !== '' && !$user->hasValidMail()) {
-			$data['approvemail'] = array(GWF_Form::SUBMIT, $this->module->lang('btn_approvemail'), $this->module->lang('th_approvemail'));
+		if (!$is_guest)
+		{
+			$data['email'] = array(GWF_Form::STRING, $user_email, $this->module->lang('th_email'));
+			### Email set but not approved.
+			if ($user_email !== '' && !$user->hasValidMail())
+			{
+				$data['approvemail'] = array(GWF_Form::SUBMIT, $this->module->lang('btn_approvemail'), $this->module->lang('th_approvemail'));
+			}
 		}
+		
 		
 		// DEMOGRAPHICS
 		$data['div1'] = array(GWF_Form::HEADLINE, $this->module->lang('th_demo', array(GWF_Time::humanDuration($this->module->cfgChangeTime()), 1)));
@@ -95,25 +100,37 @@ final class Account_Form extends GWF_Method
 		// OPTIONS
 		$data['div2'] = array(GWF_Form::HEADLINE, $this->module->lang('th_flags'));
 		
-		$data['email_fmt'] = array(GWF_Form::SELECT, $this->selectEMailFormat($user), $this->module->lang('th_email_fmt'));
+		if (!$is_guest)
+		{
+			$data['email_fmt'] = array(GWF_Form::SELECT, $this->selectEMailFormat($user), $this->module->lang('th_email_fmt'));
+		}
 		
 		if ($this->module->cfgShowCheckboxes())
 		{
 			$data['online'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::HIDE_ONLINE), $this->module->lang('th_online'));
-			$data['record_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::RECORD_IPS), $this->module->lang('th_record_ips', array($this->module->getMethodURL('Access'))), $this->module->lang('tt_record_ips'));
-			$data['alert_uas'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_UAS), $this->module->lang('th_alert_uas'), $this->module->lang('tt_alert_uas'));
-			$data['alert_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_IPS), $this->module->lang('th_alert_ips'), $this->module->lang('tt_alert_ips'));
-			$data['alert_isps'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_ISPS), $this->module->lang('th_alert_isps'), $this->module->lang('tt_alert_isps'));
+			
+			if (!$is_guest)
+			{
+				$data['record_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::RECORD_IPS), $this->module->lang('th_record_ips', array($this->module->getMethodURL('Access'))), $this->module->lang('tt_record_ips'));
+				$data['alert_uas'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_UAS), $this->module->lang('th_alert_uas'), $this->module->lang('tt_alert_uas'));
+				$data['alert_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_IPS), $this->module->lang('th_alert_ips'), $this->module->lang('tt_alert_ips'));
+				$data['alert_isps'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_ISPS), $this->module->lang('th_alert_isps'), $this->module->lang('tt_alert_isps'));
+			}
+			
 			$data['show_bday'] = array(GWF_Form::CHECKBOX,  $user->isOptionEnabled(GWF_User::SHOW_BIRTHDAY), $this->module->lang('th_show_bday'));
 			$data['show_obday'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_OTHER_BIRTHDAYS), $this->module->lang('th_show_obday'));
-			$data['show_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_EMAIL), $this->module->lang('th_show_email'));
-			$data['allow_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALLOW_EMAIL), $this->module->lang('th_allow_email'));
+			
+			if (!$is_guest)
+			{
+				$data['show_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_EMAIL), $this->module->lang('th_show_email'));
+				$data['allow_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALLOW_EMAIL), $this->module->lang('th_allow_email'));
+			}
 		}
-		
 		
 		if ($this->module->cfgShowAdult())
 		{
-			if (GWF_Time::getAge($user->getVar('user_birthdate')) >= $this->module->cfgAdultAge()) {
+			if (GWF_Time::getAge($user->getVar('user_birthdate')) >= $this->module->cfgAdultAge())
+			{
 				$data['adult'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::WANTS_ADULT), $this->module->lang('th_adult'));
 			}
 		}
@@ -143,60 +160,74 @@ final class Account_Form extends GWF_Method
 	private function onChange()
 	{
 		$back = '';
-		$user = GWF_Session::getUser();
+		$user = GWF_User::getStaticOrGuest();
+		$is_guest = $user->isGuest();
+		
+		if (!$user->persistentGuest())
+		{
+			return GWF_HTML::err('ERR_DATABASE', array(__FILE__, __LINE__));
+		}
+		
 		$form = $this->getForm();
-		if (false !== ($errors = $form->validate($this->module))) {
+		if (false !== ($errors = $form->validate($this->module)))
+		{
 			return $errors;
 		}
 		
-		# Upload Avatar
-		if (false !== ($file = $form->getVar('avatar'))) {
-			$back .= $this->saveAvatar($file);
-			Common::unlink($file['tmp_name']);
-		}
-
-		
 		# Flags
-		if ($this->module->cfgShowAdult() && GWF_Time::getAge($user->getVar('user_birthdate')) > $this->module->cfgAdultAge()) {
+		if ($this->module->cfgShowAdult() && GWF_Time::getAge($user->getVar('user_birthdate')) > $this->module->cfgAdultAge())
+		{
 			$back .= $this->changeFlag($user, 'adult', GWF_USER::WANTS_ADULT);
 		}
+		
 		$back .= $this->changeFlag($user, 'online', GWF_USER::HIDE_ONLINE);
 		$back .= $this->changeFlag($user, 'show_bday', GWF_USER::SHOW_BIRTHDAY);
 		$back .= $this->changeFlag($user, 'show_obday', GWF_USER::SHOW_OTHER_BIRTHDAYS);
-		$back .= $this->changeFlag($user, 'show_email', GWF_USER::SHOW_EMAIL);
-		$back .= $this->changeFlag($user, 'allow_email', GWF_USER::ALLOW_EMAIL);
-		# Flags IP recording
-		$msg_record_disabled = $this->changeFlag($user, 'record_ips', GWF_USER::RECORD_IPS);
-		if ($msg_record_disabled !== '')
+		if (!$is_guest)
 		{
-			$back .= $msg_record_disabled;
-			if (!$user->isOptionEnabled(GWF_User::RECORD_IPS))
-			{
-				GWF_AccountAccess::sendAlertMail($this->module, $user, 'record_disabled');
-				unset($_POST['alert_uas'], $_POST['alert_ips'], $_POST['alert_isps']);
-			}
+			$back .= $this->changeFlag($user, 'show_email', GWF_USER::SHOW_EMAIL);
+			$back .= $this->changeFlag($user, 'allow_email', GWF_USER::ALLOW_EMAIL);
 		}
-		$back .= $this->changeFlag($user, 'alert_uas', GWF_USER::ALERT_UAS);
-		$back .= $this->changeFlag($user, 'alert_ips', GWF_USER::ALERT_IPS);
-		$back .= $this->changeFlag($user, 'alert_isps', GWF_USER::ALERT_ISPS);
-		
+		# Flags IP recording
+		if (!$is_guest)
+		{
+			$msg_record_disabled = $this->changeFlag($user, 'record_ips', GWF_USER::RECORD_IPS);
+			if ($msg_record_disabled !== '')
+			{
+				$back .= $msg_record_disabled;
+				if (!$user->isOptionEnabled(GWF_User::RECORD_IPS))
+				{
+					GWF_AccountAccess::sendAlertMail($this->module, $user, 'record_disabled');
+					unset($_POST['alert_uas'], $_POST['alert_ips'], $_POST['alert_isps']);
+				}
+			}
+			$back .= $this->changeFlag($user, 'alert_uas', GWF_USER::ALERT_UAS);
+			$back .= $this->changeFlag($user, 'alert_ips', GWF_USER::ALERT_IPS);
+			$back .= $this->changeFlag($user, 'alert_isps', GWF_USER::ALERT_ISPS);
+		}
 		
 		# Email Format
-		$newfmt = (int) $_POST['email_fmt'];
-		$oldfmt = $user->isOptionEnabled(GWF_User::EMAIL_TEXT) ? GWF_User::EMAIL_TEXT : 0;
-		if ($newfmt !== $oldfmt) {
-			$user->saveOption(GWF_User::EMAIL_TEXT, $newfmt > 0);
-			$back .= $this->module->message('msg_email_fmt_'.$newfmt);
+		if (!$is_guest)
+		{
+			$newfmt = (int) $_POST['email_fmt'];
+			$oldfmt = $user->isOptionEnabled(GWF_User::EMAIL_TEXT) ? GWF_User::EMAIL_TEXT : 0;
+			if ($newfmt !== $oldfmt) {
+				$user->saveOption(GWF_User::EMAIL_TEXT, $newfmt > 0);
+				$back .= $this->module->message('msg_email_fmt_'.$newfmt);
+			}
 		}
 		
 		# Change EMAIL
-		$newmail =$form->getVar('email');
-		$oldmail = $user->getVar('user_email');
-		if ($newmail !== $oldmail) {
-			require_once 'ChangeEmail.php';
-			$back .= Account_ChangeEmail::changeEmail($this->module, $user, $newmail);
+		if (!$is_guest)
+		{
+			$newmail =$form->getVar('email');
+			$oldmail = $user->getVar('user_email');
+			if ($newmail !== $oldmail)
+			{
+				require_once 'ChangeEmail.php';
+				$back .= Account_ChangeEmail::changeEmail($this->module, $user, $newmail);
+			}
 		}
-		
 		
 		# Change Demo
 		$demo_changed = false;
@@ -220,15 +251,35 @@ final class Account_Form extends GWF_Method
 		
 		if ($demo_changed)
 		{
-			$data = array(
-				'user_countryid' => $newcid,
-				'user_langid' => $newlid,
-				'user_langid2' => $newlid2,
-				'user_gender' => $newgender,
-				'user_birthdate' => $newbirthdate,
-			);
-			require_once 'ChangeDemo.php';
-			$back .= Account_ChangeDemo::requestChange($this->module, $user, $data);
+			if ($is_guest)
+			{
+				if (!$user->saveVars(array(
+					'user_countryid' => $newcid,
+					'user_langid' => $newlid,
+					'user_langid2' => $newlid2,
+					'user_gender' => $newgender,
+					'user_birthdate' => $newbirthdate,
+				)))
+				{
+					$back .= GWF_HTML::err('ERR_DATABASE', array(__FILE__, __LINE__));
+				}
+				else
+				{
+					$back .= $this->module->message('msg_demo_changed');
+				}
+			}
+			else
+			{
+				$data = array(
+					'user_countryid' => $newcid,
+					'user_langid' => $newlid,
+					'user_langid2' => $newlid2,
+					'user_gender' => $newgender,
+					'user_birthdate' => $newbirthdate,
+				);
+				require_once 'ChangeDemo.php';
+				$back .= Account_ChangeDemo::requestChange($this->module, $user, $data);
+			}
 		}
 		
 		return $back;

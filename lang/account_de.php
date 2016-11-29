@@ -238,4 +238,10 @@ $lang = array(
 	'th_ua' => 'Browser',
 	'th_ip' => 'IP Adresse',
 	'th_isp' => 'Hostname',
+
+	# v4 Sidebar
+	'side_title' => 'Account',
+	'side_info_member' => 'Logged in as %s.',
+	'side_info_guests' => 'Connected as %s.',
+	'side_btn' => 'Change Settings',
 );

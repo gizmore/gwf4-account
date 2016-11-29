@@ -219,4 +219,10 @@ El personal de '.GWF_SITENAME,
 	'th_ua' => 'UserAgent',
 	'th_ip' => 'IP Address',
 	'th_isp' => 'Hostname',
+
+	# v4 Sidebar
+	'side_title' => 'Account',
+	'side_info_member' => 'Logged in as %s.',
+	'side_info_guests' => 'Connected as %s.',
+	'side_btn' => 'Change Settings',
 );
