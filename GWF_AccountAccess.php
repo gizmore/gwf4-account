@@ -12,7 +12,7 @@ final class GWF_AccountAccess extends GDO
 	public function getColumnDefines()
 	{
 		return array(
-			'accacc_uid'  => array(GDO::INT|GDO::PRIMARY_KEY, GDO::NOT_NULL),
+			'accacc_uid'  => array(GDO::UINT|GDO::PRIMARY_KEY, GDO::NOT_NULL),
 			'accacc_ua'   => array(GDO::CHAR|GDO::BINARY|GDO::CASE_S|GDO::PRIMARY_KEY, GDO::NULL, 16),
 			'accacc_ip'   => GWF_IP6::gdoDefine(GWF_IP_EXACT, GDO::NOT_NULL, GDO::PRIMARY_KEY),
 			'accacc_isp'  => array(GDO::CHAR|GDO::BINARY|GDO::CASE_S, GDO::NULL, 16),

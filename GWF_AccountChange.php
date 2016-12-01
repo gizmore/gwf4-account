@@ -13,7 +13,7 @@ final class GWF_AccountChange extends GDO
 	public function getColumnDefines()
 	{
 		return array(
-			'userid' => array(GDO::INT|GDO::PRIMARY_KEY, true, 11),
+			'userid' => array(GDO::UINT|GDO::PRIMARY_KEY, true, 11),
 			'type' => array(GDO::VARCHAR|GDO::ASCII|GDO::CASE_S|GDO::PRIMARY_KEY, true, 16),
 			'token' => array(GDO::CHAR|GDO::ASCII|GDO::CASE_S, true, self::TOKEN_LENGTH),
 			'timestamp' => array(GDO::INT|GDO::UNSIGNED),
