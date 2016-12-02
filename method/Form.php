@@ -259,6 +259,7 @@ final class Account_Form extends GWF_Method
 					'user_langid2' => $newlid2,
 					'user_gender' => $newgender,
 					'user_birthdate' => $newbirthdate,
+					'user_saved_at' => GWF_Time::getDate(),
 				)))
 				{
 					$back .= GWF_HTML::err('ERR_DATABASE', array(__FILE__, __LINE__));

@@ -98,6 +98,8 @@ final class Account_ChangeDemo extends GWF_Method
 			return GWF_HTML::err('ERR_GENERAL', array( __FILE__, __LINE__));
 		}
 		
+		$data['user_saved_at'] = GWF_Time::getDate();
+		
 		if (false === $user->saveVars($data)) {
 			return GWF_HTML::err('ERR_DATABASE', array( __FILE__, __LINE__));
 		}
