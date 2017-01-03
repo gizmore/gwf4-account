@@ -1,10 +1,9 @@
-<md-toolbar class="md-theme-indigo"layout-align="right">
-<h1 class="md-toolbar-tools"><?php echo $lang->lang('side_title'); ?></h1>
-	<md-content layout-margin ng-controller="GWFCtrl" class="gwf-account-bar">
-
-		<div><?php echo $info_text; ?></div>
-		
-		<md-button href="<?php echo $href_settings; ?>"><?php echo $lang->lang('side_btn'); ?></md-button>
-
-	</md-content>
-</md-toolbar>
+<gwf-sidebar-item>
+	<h2><?php echo $lang->lang('side_title'); ?></h2>
+	<div>
+		<p><?php echo $info_text; ?></p>
+	</div>
+	<gwf-buttons>
+		<?php echo GWF_Button::generic($lang->lang('side_btn'), $href_settings); ?>
+	</gwf-buttons>
+</gwf-sidebar-item>
