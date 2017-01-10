@@ -74,10 +74,10 @@ final class Account_Form extends GWF_Method
 		
 		# SECURITY
 		$data = array();
-		$data['username'] = array(GWF_Form::SSTRING, $user->getVar('user_name'), $this->module->lang('th_username'));
 		
 		if (!$is_guest)
 		{
+			$data['username'] = array(GWF_Form::SSTRING, $user->getVar('user_name'), $this->module->lang('th_username'));
 			$data['email'] = array(GWF_Form::STRING, $user_email, $this->module->lang('th_email'));
 			### Email set but not approved.
 			if ($user_email !== '' && !$user->hasValidMail())
@@ -85,7 +85,18 @@ final class Account_Form extends GWF_Method
 				$data['approvemail'] = array(GWF_Form::SUBMIT, $this->module->lang('btn_approvemail'), $this->module->lang('th_approvemail'));
 			}
 		}
-		
+		else
+		{
+			$guestname = $user->getVar('user_guest_name');
+			if (empty($guestname))
+			{
+				$data['nickname'] = array(GWF_Form::STRING, '', $this->module->lang('th_nickname'));
+			}
+			else
+			{
+				$data['nickname'] = array(GWF_Form::SSTRING, $guestname, $this->module->lang('th_nickname'));
+			}
+		}
 		
 		// DEMOGRAPHICS
 		$data['div1'] = array(GWF_Form::HEADLINE, $this->module->lang('th_demo', array(GWF_Time::humanDuration($this->module->cfgChangeTime()), 1)));
@@ -137,9 +148,14 @@ final class Account_Form extends GWF_Method
 				
 		$data['divpw'] = array(GWF_Form::HEADLINE, $this->module->lang('th_change_pw', array( 'recovery')));
 		
-		// BTN
-		$buttons = array('change'=>$this->module->lang('btn_submit'),'delete'=>$this->module->lang('btn_delete'));
-//		$data['change'] = array(GWF_Form::SUBMIT, $this->module->lang('btn_submit'), '');
+		# Buttons
+		$buttons = array(
+			'change'=>$this->module->lang('btn_submit')
+		);
+		if (!$user->isGuest())
+		{
+			$buttons['delete'] = $this->module->lang('btn_delete');
+		}
 		$data['buttons'] = array(GWF_Form::SUBMITS, $buttons);		
 		return new GWF_Form($this, $data);
 	}
@@ -150,8 +166,8 @@ final class Account_Form extends GWF_Method
 	private function selectEMailFormat(GWF_User $user)
 	{
 		$data = array(
-			array(GWF_User::EMAIL_HTML, $this->module->lang('email_fmt_html')),
-			array(GWF_User::EMAIL_TEXT, $this->module->lang('email_fmt_text')),
+			GWF_User::EMAIL_HTML => $this->module->lang('email_fmt_html'),
+			GWF_User::EMAIL_TEXT => $this->module->lang('email_fmt_text'),
 		);
 		$selected = $user->isOptionEnabled(GWF_User::EMAIL_TEXT) ? GWF_User::EMAIL_TEXT : 0;
 		return GWF_Select::display('email_fmt', $data, $selected);
@@ -301,6 +317,15 @@ final class Account_Form extends GWF_Method
 	##################
 	### Validators ###
 	##################
+	public function validate_nickname(Module_Account $module, $arg)
+	{
+		if (!GWF_Validator::isValidUsername($arg))
+		{
+			return $module->lang('err_nickname_invalid');
+		}
+		return false;
+	}
+
 	public function validate_email(Module_Account $module, $arg)
 	{
 		$arg = trim($arg);
