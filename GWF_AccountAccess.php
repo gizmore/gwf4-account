@@ -74,52 +74,47 @@ final class GWF_AccountAccess extends GDO
 	
 	public static function onAccess(Module_Account $module, GWF_User $user)
 	{
-		$alert = false;
 		$table = self::table(__CLASS__);
+		$query = '';
 		
 		# Check UA
 		$ua = self::uahash();		
 		if ($user->isOptionEnabled(GWF_User::ALERT_UAS))
 		{
-			if (!$table->selectVar('1', "accacc_uid={$user->getID()} AND ".self::hash_check('accacc_ua',$ua)))
-			{
-				$alert = true;
-			}
+			$query .= " AND ".self::hash_check('accacc_ua',$ua);
 		}
 		
 		# Check exact IP
 		$ip = GWF_IP6::getIP(GWF_IP_EXACT);
 		if ($user->isOptionEnabled(GWF_User::ALERT_IPS))
 		{
-			if (!$table->selectVar('1', "accacc_uid={$user->getID()} AND accacc_ip='".$table->escape($ip)."'"))
-			{
-				$alert = true;
-			}
+			$query .= " AND accacc_ip='".$table->escape($ip)."'";
 		}
 		
 		$isp = null;
 		if ($user->isOptionEnabled(GWF_User::ALERT_ISPS))
 		{
 			$isp = self::isphash();
-			if (!$table->selectVar('1', "accacc_uid={$user->getID()} AND ".self::hash_check('accacc_isp',$isp)))
+			$query .= ' AND '.self::hash_check('accacc_isp',$isp);
+		}
+		
+		# Query alert
+		if (!empty($query))
+		{
+			if (!$table->selectVar('1', "accacc_uid={$user->getID()} $query"))
 			{
-				$alert = true;
+				self::sendAlertMail($module, $user, 'record_alert');
+
+				$data = array(
+						'accacc_uid' => $user->getID(),
+						'accacc_ip' => $ip,
+						'accacc_isp' => $isp,
+						'accacc_ua' => $ua,
+						'accacc_time' => time(),
+				);
+				$table->insertAssoc($data);
 			}
 		}
-		
-		if ($alert === true)
-		{
-			self::sendAlertMail($module, $user, 'record_alert');
-		}
-		
-		$data = array(
-			'accacc_uid' => $user->getID(),
-			'accacc_ip' => $ip,
-			'accacc_isp' => $isp,
-			'accacc_ua' => $ua,
-			'accacc_time' => time(),
-		);
-		$table->insertAssoc($data);
 	}
 	
 	public static function sendAlertMail(Module_Account $module, GWF_User $user, $record_alert='record_alert')
