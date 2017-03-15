@@ -43,17 +43,17 @@ final class Account_Form extends GWF_Method
 		return $this->templateForm();
 	}
 	
-	private function templateForm()
+	public function templateForm()
 	{
 		$form = $this->getForm();
 		$tVars = array(
-			'form' => $form->templateY($this->module->lang('form_title')),
+			'form' => $form->templateY($this->module->lang('form_title'), GWF_WEB_ROOT.'account'),
 		);
 		
 		if (function_exists('gnupg_init'))
 		{
 			$formGPG = $this->getFormGPG();
-			$tVars['form_gpg'] = $formGPG->templateY($this->module->lang('ft_gpg'));
+			$tVars['form_gpg'] = $formGPG->templateY($this->module->lang('ft_gpg'), GWF_WEB_ROOT.'account');
 		}
 		else
 		{
@@ -66,8 +66,13 @@ final class Account_Form extends GWF_Method
 	################
 	### The Form ###
 	################
+	/**
+	 * @return Module_Account
+	 */
+	private function moduleAccount() { return $this->module; }
 	public function getForm()
 	{
+		$m = $this->moduleAccount();
 		$user = GWF_User::getStaticOrGuest();
 		$is_guest = $user->isGuest();
 		$user_email = $user->getVar('user_email');
@@ -78,7 +83,7 @@ final class Account_Form extends GWF_Method
 		if (!$is_guest)
 		{
 			$data['username'] = array(GWF_Form::SSTRING, $user->getVar('user_name'), $this->module->lang('th_username'));
-			$data['email'] = array(GWF_Form::STRING, $user_email, $this->module->lang('th_email'));
+			$data['email'] = array($m->cfgAllowEmailChange() ? GWF_Form::STRING : GWF_Form::SSTRING, $user_email, $this->module->lang('th_email'));
 			### Email set but not approved.
 			if ($user_email !== '' && !$user->hasValidMail())
 			{
@@ -100,11 +105,19 @@ final class Account_Form extends GWF_Method
 		
 		// DEMOGRAPHICS
 		$data['div1'] = array(GWF_Form::HEADLINE, $this->module->lang('th_demo', array(GWF_Time::humanDuration($this->module->cfgChangeTime()), 1)));
-		$data['countryid'] = array(GWF_Form::SELECT, $user->getCountrySelect('countryid'), $this->module->lang('th_countryid'));
-		$data['langid'] = array(GWF_Form::SELECT, GWF_LangSelect::single(0, 'langid', Common::getPostString('langid', $user->getVar('user_langid'))), $this->module->lang('th_langid'));
-		$data['langid2'] = array(GWF_Form::SELECT, GWF_LangSelect::single(0, 'langid2', Common::getPostString('langid2', $user->getVar('user_langid2'))), $this->module->lang('th_langid2'));
+		$data['countryid'] = array(GWF_Form::SELECT, $user->getCountrySelect('countryid', $m->cfgAllowCountryChange()), $this->module->lang('th_countryid'));
+		if ($m->cfgAllowLanguageChange())
+		{
+			$data['langid'] = array(GWF_Form::SELECT, GWF_LangSelect::single(0, 'langid', Common::getPostString('langid', $user->getVar('user_langid'))), $this->module->lang('th_langid'));
+			if ($m->cfgAllowSecondaryLanguageChange())
+			{
+				$data['langid2'] = array(GWF_Form::SELECT, GWF_LangSelect::single(0, 'langid2', Common::getPostString('langid2', $user->getVar('user_langid2'))), $this->module->lang('th_langid2'));
+			}
+		}
+		
+		
 		$data['birthdate'] = array(GWF_Form::DATE, $user->getVar('user_birthdate'), $this->module->lang('th_birthdate'), '', GWF_Date::LEN_DAY);
-		if ($this->module->cfgShowGender())
+		if ($m->cfgAllowGenderChange())
 		{
 			$data['gender'] = array(GWF_Form::SELECT, $user->getGenderSelect(), $this->module->lang('th_gender'));
 		}
@@ -113,7 +126,10 @@ final class Account_Form extends GWF_Method
 		
 		if (!$is_guest)
 		{
-			$data['email_fmt'] = array(GWF_Form::SELECT, $this->selectEMailFormat($user), $this->module->lang('th_email_fmt'));
+			if ($m->cfgAllowEmailFormatChange())
+			{
+				$data['email_fmt'] = array(GWF_Form::SELECT, $this->selectEMailFormat($user), $this->module->lang('th_email_fmt'));
+			}
 		}
 		
 		if ($this->module->cfgShowCheckboxes())
@@ -122,19 +138,31 @@ final class Account_Form extends GWF_Method
 			
 			if (!$is_guest)
 			{
-				$data['record_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::RECORD_IPS), $this->module->lang('th_record_ips', array($this->module->getMethodURL('Access'))), $this->module->lang('tt_record_ips'));
-				$data['alert_uas'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_UAS), $this->module->lang('th_alert_uas'), $this->module->lang('tt_alert_uas'));
-				$data['alert_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_IPS), $this->module->lang('th_alert_ips'), $this->module->lang('tt_alert_ips'));
-				$data['alert_isps'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_ISPS), $this->module->lang('th_alert_isps'), $this->module->lang('tt_alert_isps'));
+				if ($m->cfgAllowIPSecurityChange())
+				{
+					$data['record_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::RECORD_IPS), $this->module->lang('th_record_ips', array($this->module->getMethodURL('Access'))), $this->module->lang('tt_record_ips'));
+				}
+				if ($m->cfgAllowSecurityChange())
+				{
+					$data['alert_uas'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_UAS), $this->module->lang('th_alert_uas'), $this->module->lang('tt_alert_uas'));
+					$data['alert_ips'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_IPS), $this->module->lang('th_alert_ips'), $this->module->lang('tt_alert_ips'));
+					$data['alert_isps'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALERT_ISPS), $this->module->lang('th_alert_isps'), $this->module->lang('tt_alert_isps'));
+				}
 			}
 			
-			$data['show_bday'] = array(GWF_Form::CHECKBOX,  $user->isOptionEnabled(GWF_User::SHOW_BIRTHDAY), $this->module->lang('th_show_bday'));
-			$data['show_obday'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_OTHER_BIRTHDAYS), $this->module->lang('th_show_obday'));
+			if ($m->cfgAllowBirthdayOptionsChange())
+			{
+				$data['show_bday'] = array(GWF_Form::CHECKBOX,  $user->isOptionEnabled(GWF_User::SHOW_BIRTHDAY), $this->module->lang('th_show_bday'));
+				$data['show_obday'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_OTHER_BIRTHDAYS), $this->module->lang('th_show_obday'));
+			}
 			
 			if (!$is_guest)
 			{
-				$data['show_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_EMAIL), $this->module->lang('th_show_email'));
-				$data['allow_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALLOW_EMAIL), $this->module->lang('th_allow_email'));
+				if ($m->cfgAllowEmailVisibleChange())
+				{
+					$data['show_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::SHOW_EMAIL), $this->module->lang('th_show_email'));
+					$data['allow_email'] = array(GWF_Form::CHECKBOX, $user->isOptionEnabled(GWF_User::ALLOW_EMAIL), $this->module->lang('th_allow_email'));
+				}
 			}
 		}
 		
@@ -176,6 +204,7 @@ final class Account_Form extends GWF_Method
 	private function onChange()
 	{
 		$back = '';
+		$m = $this->moduleAccount();
 		$user = GWF_User::getStaticOrGuest();
 		$is_guest = $user->isGuest();
 		
@@ -196,18 +225,31 @@ final class Account_Form extends GWF_Method
 			$back .= $this->changeFlag($user, 'adult', GWF_USER::WANTS_ADULT);
 		}
 		
-		$back .= $this->changeFlag($user, 'online', GWF_USER::HIDE_ONLINE);
-		$back .= $this->changeFlag($user, 'show_bday', GWF_USER::SHOW_BIRTHDAY);
-		$back .= $this->changeFlag($user, 'show_obday', GWF_USER::SHOW_OTHER_BIRTHDAYS);
+		if ($m->cfgAllowOnlineVisibleChange())
+		{
+			$back .= $this->changeFlag($user, 'online', GWF_USER::HIDE_ONLINE);
+		}
+		
+		if ($m->cfgAllowBirthdayOptionsChange())
+		{
+			$back .= $this->changeFlag($user, 'show_bday', GWF_USER::SHOW_BIRTHDAY);
+			$back .= $this->changeFlag($user, 'show_obday', GWF_USER::SHOW_OTHER_BIRTHDAYS);
+		}
 		if (!$is_guest)
 		{
-			$back .= $this->changeFlag($user, 'show_email', GWF_USER::SHOW_EMAIL);
-			$back .= $this->changeFlag($user, 'allow_email', GWF_USER::ALLOW_EMAIL);
+			if ($m->cfgAllowEmailVisibleChange())
+			{
+				$back .= $this->changeFlag($user, 'show_email', GWF_USER::SHOW_EMAIL);
+				$back .= $this->changeFlag($user, 'allow_email', GWF_USER::ALLOW_EMAIL);
+			}
 		}
 		# Flags IP recording
 		if (!$is_guest)
 		{
-			$msg_record_disabled = $this->changeFlag($user, 'record_ips', GWF_USER::RECORD_IPS);
+			if ($m->cfgAllowIPSecurityChange())
+			{
+				$msg_record_disabled = $this->changeFlag($user, 'record_ips', GWF_USER::RECORD_IPS);
+			}
 			if ($msg_record_disabled !== '')
 			{
 				$back .= $msg_record_disabled;
@@ -217,9 +259,12 @@ final class Account_Form extends GWF_Method
 					unset($_POST['alert_uas'], $_POST['alert_ips'], $_POST['alert_isps']);
 				}
 			}
-			$back .= $this->changeFlag($user, 'alert_uas', GWF_USER::ALERT_UAS);
-			$back .= $this->changeFlag($user, 'alert_ips', GWF_USER::ALERT_IPS);
-			$back .= $this->changeFlag($user, 'alert_isps', GWF_USER::ALERT_ISPS);
+			if ($m->cfgAllowSecurityChange())
+			{
+				$back .= $this->changeFlag($user, 'alert_uas', GWF_USER::ALERT_UAS);
+				$back .= $this->changeFlag($user, 'alert_ips', GWF_USER::ALERT_IPS);
+				$back .= $this->changeFlag($user, 'alert_isps', GWF_USER::ALERT_ISPS);
+			}
 		}
 		
 		# Email Format
@@ -227,7 +272,7 @@ final class Account_Form extends GWF_Method
 		{
 			$newfmt = (int) $_POST['email_fmt'];
 			$oldfmt = $user->isOptionEnabled(GWF_User::EMAIL_TEXT) ? GWF_User::EMAIL_TEXT : 0;
-			if ($newfmt !== $oldfmt) {
+			if (($newfmt !== $oldfmt) && ($m->cfgAllowEmailFormatChange())) {
 				$user->saveOption(GWF_User::EMAIL_TEXT, $newfmt > 0);
 				$back .= $this->module->message('msg_email_fmt_'.$newfmt);
 			}
@@ -236,8 +281,8 @@ final class Account_Form extends GWF_Method
 		# Change EMAIL
 		if (!$is_guest)
 		{
-			$newmail =$form->getVar('email');
 			$oldmail = $user->getVar('user_email');
+			$newmail = $m->cfgAllowEmailChange() ? $form->getVar('email') : $oldmail;
 			if ($newmail !== $oldmail)
 			{
 				require_once 'ChangeEmail.php';
@@ -249,19 +294,19 @@ final class Account_Form extends GWF_Method
 		$demo_changed = false;
 
 		$oldcid = (int) $user->getVar('user_countryid');
-		$newcid = (int) $form->getVar('countryid');
+		$newcid = $m->cfgAllowCountryChange() ? (int) $form->getVar('countryid') : $oldcid;
 		if ($oldcid !== $newcid) { $demo_changed = true; }
 		$oldlid = (int) $user->getVar('user_langid');
-		$newlid = (int) $form->getVar('langid');
+		$newlid = $m->cfgAllowLanguageChange() ? (int) $form->getVar('langid') : $oldlid;
 		if ($oldlid !== $newlid) { $demo_changed = true; }
 		$oldlid2 = (int) $user->getVar('user_langid2');
-		$newlid2 = (int) $form->getVar('langid2');
+		$newlid2 = $m->cfgAllowSecondaryLanguageChange() ? (int) $form->getVar('langid2') : $oldlid2;
 		if ($oldlid2 !== $newlid2) { $demo_changed = true; }
 		$oldgender = $user->getVar('user_gender');
-		$newgender = $form->getVar('gender', GWF_User::NO_GENDER);
+		$newgender = $m->cfgAllowGenderChange() ? $form->getVar('gender', GWF_User::NO_GENDER) : $oldgender;
 		if ($oldgender !== $newgender) { $demo_changed = true; }
 		$oldbirthdate = $user->getVar('user_birthdate');
-		$newbirthdate = $form->getVar('birthdate');
+		$newbirthdate = $m->cfgAllowBirthdayChange() ? $form->getVar('birthdate') : $oldbirthdate;
 		if ($newbirthdate === '') { $newbirthdate = '00000000'; }
 		if ($oldbirthdate != $newbirthdate) { $demo_changed = true; }
 		

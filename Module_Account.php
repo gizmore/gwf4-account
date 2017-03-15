@@ -30,6 +30,18 @@ final class Module_Account extends GWF_Module
 			'demo_changetime' => array(GWF_Time::ONE_MONTH*3, 'time', 0, GWF_TIME::ONE_YEAR*2),
 			'show_checkboxes' => array('1', 'bool'),
 			'account_guest_settings' => array('1', 'bool'),
+			'allow_country_change' => array('1', 'bool'),
+			'allow_lang1_change' => array('1', 'bool'),
+			'allow_lang2_change' => array('1', 'bool'),
+			'allow_birthday_change' => array('1', 'bool'),
+			'allow_gender_change' => array('1', 'bool'),
+			'allow_ip_sec_change' => array('1', 'bool'),
+			'allow_sec_change' => array('1', 'bool'),
+			'allow_email_change' => array('1', 'bool'),
+			'allow_email_fmt_change' => array('1', 'bool'),
+			'allow_online_show_change' => array('1', 'bool'),
+			'allow_email_show_change' => array('1', 'bool'),
+			'allow_birthday_show_change' => array('1', 'bool'),
 		));
 	}
 
@@ -44,6 +56,21 @@ final class Module_Account extends GWF_Module
 	public function cfgAdultAge() { return $this->getModuleVarInt('adult_age', 21); }
 	public function cfgShowCheckboxes() { return $this->getModuleVarBool('show_checkboxes', '1'); }
 	public function cfgGuestSettings() { return $this->getModuleVarBool('account_guest_settings', '1') && GWF_Session::hasSession(); }
+	
+	public function cfgAllowCountryChange() { return $this->getModuleVarBool('allow_country_change', '0'); }
+	public function cfgAllowLanguageChange() { return $this->getModuleVarBool('allow_lang1_change', '1'); }
+	public function cfgAllowSecondaryLanguageChange() { return $this->getModuleVarBool('allow_lang2_change', '1'); }
+	public function cfgAllowBirthdayChange() { return $this->getModuleVarBool('allow_birthday_change', '1'); }
+	public function cfgAllowGenderChange() { return $this->getModuleVarBool('allow_gender_change', '1'); }
+	
+	public function cfgAllowIPSecurityChange() { return $this->getModuleVarBool('allow_ip_sec_change', '1'); }
+	public function cfgAllowSecurityChange() { return $this->getModuleVarBool('allow_sec_change', '1'); }
+	public function cfgAllowEmailChange() { return $this->getModuleVarBool('allow_email_change', '1'); }
+	public function cfgAllowEmailFormatChange() { return $this->getModuleVarBool('allow_email_fmt_change', '1'); }
+	public function cfgAllowOnlineVisibleChange() { return $this->getModuleVarBool('allow_online_show_change', '1'); }
+	public function cfgAllowEmailVisibleChange() { return $this->getModuleVarBool('allow_email_show_change', '1'); }
+	public function cfgAllowBirthdayOptionsChange() { return $this->getModuleVarBool('allow_birthday_show_change', '1'); }
+	
 	
 	###############
 	### Startup ###
